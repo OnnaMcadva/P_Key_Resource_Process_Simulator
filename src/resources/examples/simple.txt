@@ -1,0 +1,6 @@
+# very simple demo - krpsim
+euro:10
+equipment_purchase:(euro:8):(equipment:1):10
+product_creation:(equipment:1):(product:1):30
+Delivery:(product:1):(happy_client:1):20
+optimize:(time;happy_client)
