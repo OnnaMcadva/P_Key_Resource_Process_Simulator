@@ -1,14 +1,14 @@
-.PHONY: build run clean
+IMAGE_NAME=krpsim
+CONTAINER_NAME=krpsim_container
 
 build:
-	mvn -q clean package
+	docker build -t $(IMAGE_NAME) .
 
-run:
-	java -jar target/krpsim-1.0.jar
+run: build
+	docker run --rm -it $(IMAGE_NAME)
+
+shell: build
+	docker run --rm -it $(IMAGE_NAME) /bin/bash
 
 clean:
-	mvn -q clean
-
-
-#// make build
-#// make run
+	docker rmi $(IMAGE_NAME) || true
