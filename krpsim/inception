@@ -24,20 +24,3 @@ end_dream:(dream:3):(clock:1):60
 #
 optimize:(year)
 #
-
-
-echo -e "\e[1;32mToday is:\e[0m \e[1;34m$(date)\e[0m"
-echo -e "\e[1;33mTemperature:\e[0m $(vcgencmd measure_temp)"
-Raspberry Pi
-
-
-
-        rotation_angle = self.transform_settings.rotation
-        if abs(rotation_angle) > 1e-6:
-            (h, w) = image.shape[:2]
-            center = (w / 2, h / 2)
-            M = cv2.getRotationMatrix2D(center, rotation_angle, 1.0)
-            # image = cv2.warpAffine(image, M, (w, h))
-            image = cv2.warpAffine(image, M, (w, h), borderMode=cv2.BORDER_CONSTANT, borderValue=(255, 255, 255, 0))
-
-        (h, w) = image.shape[:2]

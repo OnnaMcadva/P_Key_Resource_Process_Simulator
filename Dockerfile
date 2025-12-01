@@ -17,10 +17,10 @@ WORKDIR /app
 
 COPY --from=build /app/target/krpsim-1.0.jar app.jar
 
-# файл, которые ты хочешь запускать
-COPY krpism ./krpism
+# Files that you want to run (scenarios) — corrected folder name
+COPY krpsim ./krpsim
 
-CMD ["java", "-jar", "app.jar", "krpism/simple/simple.txt"]
+CMD ["java", "-jar", "app.jar", "krpsim/simple", "100"]
 
 
 
@@ -29,4 +29,4 @@ CMD ["java", "-jar", "app.jar", "krpism/simple/simple.txt"]
 # COPY . .
 # RUN apt update && apt install -y maven
 # RUN mvn clean compile
-# CMD ["java", "-cp", "target/classes", "krpsim.Krpsim", "krpism/simple/simple.txt"]
+# CMD ["java", "-cp", "target/classes", "krpsim.Krpsim", "krpsim/simple", "100"]

@@ -2,7 +2,7 @@
 
 ## Overview
 
-P_Key_Resource_Process_Simulator is a Java-based simulator for process and resource management tasks. It allows you to run simulations using different scenario files from the `krpism/` folder.
+P_Key_Resource_Process_Simulator is a Java-based simulator for process and resource management tasks. It allows you to run simulations using different scenario files from the `krpsim/` folder.
 
 ## Features
 
@@ -13,9 +13,10 @@ P_Key_Resource_Process_Simulator is a Java-based simulator for process and resou
 ## Project Structure
 
 - `src/` — Java source code
-- `krpism/` — scenario files for testing (examples: `simple`, `pomme`, `inception`, etc.)
+- `krpsim/` — scenario files for testing (examples: `simple`, `pomme`, `inception`, etc.)
 - `Dockerfile` — for containerized builds and runs
 - `Makefile` — shortcuts for frequent Docker commands
+- `portable_app/` — a prebuilt portable distribution (contains `krpsim-1.0.jar` and scenarios), optional
 - `pom.xml` — Maven build configuration
 - `.gitignore`, `README.md` — housekeeping
 
@@ -35,11 +36,11 @@ mvn clean package -DskipTests
 
 ### 2. Run Simulator Locally
 
-Change the scenario file (`krpism/simple`, `krpism/pomme`, etc.) as you wish:
+Change the scenario file (`krpsim/simple`, `krpsim/pomme`, etc.) as you wish:
 
 ```bash
-java -jar target/krpsim-1.0.jar krpism/simple
-java -jar target/krpsim-1.0.jar krpism/pomme
+java -jar target/krpsim-1.0.jar krpsim/simple
+java -jar target/krpsim-1.0.jar krpsim/pomme
 ```
 
 ### 3. Build & Run with Docker (using Makefile)
@@ -49,7 +50,7 @@ java -jar target/krpsim-1.0.jar krpism/pomme
 make build
 ```
 
-**Run the default scenario (`krpism/simple`) in Docker:**
+**Run the default scenario (`krpsim/simple`) in Docker:**
 ```bash
 make run
 ```
@@ -58,8 +59,8 @@ make run
 ```bash
 make shell
 # Then inside container:
-java -jar app.jar krpism/pomme
-java -jar app.jar krpism/inception
+java -jar app.jar krpsim/pomme
+java -jar app.jar krpsim/inception
 # (and any other scenario file)
 ```
 
@@ -70,8 +71,8 @@ make clean
 
 ## How to Test Different Scenarios
 
-- All scenario files are in the `krpism/` folder: `simple`, `pomme`, `inception`, `ikea`, `recre`, `steak`.
-- Just change the file name after `krpism/` when running the jar.
+- All scenario files are in the `krpsim/` folder: `simple`, `pomme`, `inception`, `ikea`, `recre`, `steak`.
+- Just change the file name after `krpsim/` when running the jar.
 - You can create your own test files in this folder following the structure of others.
 
 ## Troubleshooting
