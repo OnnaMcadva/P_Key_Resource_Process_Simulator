@@ -23,10 +23,4 @@ COPY krpsim ./krpsim
 CMD ["java", "-jar", "app.jar", "krpsim/simple", "100"]
 
 
-
-# FROM openjdk:17
-# WORKDIR /app
-# COPY . .
-# RUN apt update && apt install -y maven
-# RUN mvn clean compile
-# CMD ["java", "-cp", "target/classes", "krpsim.Krpsim", "krpsim/simple", "100"]
+# mvn clean package -DskipTests
