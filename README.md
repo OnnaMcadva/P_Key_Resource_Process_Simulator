@@ -2,57 +2,88 @@
 
 ## Overview
 
-P_Key_Resource_Process_Simulator is a Java-based simulator for process and resource management tasks. It allows you to run simulations based on input files provided in the `krpism/` folder.
+P_Key_Resource_Process_Simulator is a Java-based simulator for process and resource management tasks. It allows you to run simulations using different scenario files from the `krpism/` folder.
 
 ## Features
 
-- Simulate process/resource scenarios from structured input files
-- Build and run as a command-line Java application or inside Docker
-- Configurable input and runtime options
+- Simulate process/resource scenarios from custom input files
+- Build and run easily via Docker and Makefile
+- Quickly test different scenarios by switching input files
 
-## Getting Started
+## Project Structure
 
-### Prerequisites
+- `src/` — Java source code
+- `krpism/` — scenario files for testing (examples: `simple`, `pomme`, `inception`, etc.)
+- `Dockerfile` — for containerized builds and runs
+- `Makefile` — shortcuts for frequent Docker commands
+- `pom.xml` — Maven build configuration
+- `.gitignore`, `README.md` — housekeeping
+
+## Requirements
 
 - Java 17+
 - Maven
-- Docker (optional, for containerized runs)
+- Docker (optional, but recommended)
 
-### Build & Run Locally
+## Quick Start
+
+### 1. Build with Maven (local, without Docker)
 
 ```bash
-# Install dependencies and package
 mvn clean package -DskipTests
-
-# Run simulator
-java -jar target/krpsim-1.0.jar krpism/simple/simple.txt
 ```
 
-### Build & Run with Docker
+### 2. Run Simulator Locally
+
+Change the scenario file (`krpism/simple`, `krpism/pomme`, etc.) as you wish:
 
 ```bash
-docker build -t krpsim .
-docker run --rm krpsim
+java -jar target/krpsim-1.0.jar krpism/simple
+java -jar target/krpsim-1.0.jar krpism/pomme
 ```
 
-By default, the container runs using the `krpism/simple/simple.txt` input file. You can replace this file with your own.
+### 3. Build & Run with Docker (using Makefile)
 
-### Project Structure
+**Build the Docker image:**
+```bash
+make build
+```
 
-- `src/`: Main Java source code
-- `krpism/`: Folder for simulation input files (`simple/simple.txt` is the default)
-- `Dockerfile`: Containerization setup for building and running
-- `pom.xml`: Maven build configuration
+**Run the default scenario (`krpism/simple`) in Docker:**
+```bash
+make run
+```
 
-### Example Usage
+**Open interactive shell in Docker (for manual tests):**
+```bash
+make shell
+# Then inside container:
+java -jar app.jar krpism/pomme
+java -jar app.jar krpism/inception
+# (and any other scenario file)
+```
 
-Edit or add input files in the `krpism/` directory as needed.
+**Remove Docker image:**
+```bash
+make clean
+```
+
+## How to Test Different Scenarios
+
+- All scenario files are in the `krpism/` folder: `simple`, `pomme`, `inception`, `ikea`, `recre`, `steak`.
+- Just change the file name after `krpism/` when running the jar.
+- You can create your own test files in this folder following the structure of others.
 
 ## Troubleshooting
 
-- Ensure all referenced files exist (`krpism/simple/simple.txt`).
-- If Docker build fails, check Maven output, missing dependencies, or incorrect paths.
+- Check existence of scenario files before running commands!
+- For Docker: make sure Docker is installed and running.
+- For Java: use Java 17 or newer.
 
-## License & Contributing
+## Contributing & Support
 
 Feel free to fork, contribute, or report issues!
+
+---
+
+Made with ❤️ for simulation experiments!
