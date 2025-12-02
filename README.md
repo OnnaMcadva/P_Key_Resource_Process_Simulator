@@ -1,3 +1,7 @@
+
+
+---
+
 # P_Key_Resource_Process_Simulator
 
 ## Overview
@@ -6,50 +10,51 @@ P_Key_Resource_Process_Simulator is a Java-based simulator for process and resou
 
 ## Features
 
-- Simulate process/resource scenarios from custom input files
-- Build and run easily via Docker and Makefile
-- Quickly test different scenarios by switching input files
+* Simulate process/resource scenarios from custom input files
+* Build and run easily via Docker and Makefile
+* Quickly test different scenarios by switching input files
 
 ## Project Structure
 
-- `src/` — Java source code
-- `krpsim/` — scenario files for testing (examples: `simple`, `pomme`, `inception`, etc.)
-- `Dockerfile` — for containerized builds and runs
-- `Makefile` — shortcuts for frequent Docker commands
-- `portable_app/` — a prebuilt portable distribution (contains `krpsim-1.0.jar` and scenarios), optional
-- `pom.xml` — Maven build configuration
-- `.gitignore`, `README.md` — housekeeping
+* `src/` — Java source code
+* `krpsim/` — scenario files for testing (examples: `simple`, `pomme`, `inception`, etc.)
+* `Dockerfile` — for containerized builds and runs
+* `Makefile` — shortcuts for frequent Docker commands
+* `portable_app/` — a prebuilt portable distribution (contains `krpsim-1.0.jar` and scenarios), optional
+* `pom.xml` — Maven build configuration
+* `.gitignore`, `README.md` — housekeeping
 
 ## Requirements
 
-- Java 17+
-- Maven
-- Docker (optional, but recommended)
+* Java 17+
+* Maven
+* Docker (optional but recommended)
 
-## Installation (быстро и надёжно)
+## Installation (fast and reliable)
 
-- Убедитесь, что установлен JDK 17 (Eclipse Temurin / OpenJDK). На Windows можно установить MSI/ZIP для JDK 17.
-- Проверьте в терминале:
+* Make sure JDK 17 (Eclipse Temurin / OpenJDK) is installed.
+  On Windows, you can install JDK 17 using MSI or ZIP.
+* Check versions in the terminal:
 
 ```powershell
 java -version
 mvn -v
 ```
 
-- Если `java` не найден, нужно установить JDK 17 и задать `JAVA_HOME`. Пример (PowerShell, текущая сессия):
+* If `java` is not found, install JDK 17 and set `JAVA_HOME`. Example (PowerShell, current session):
 
 ```powershell
 $env:JAVA_HOME = 'C:\Program Files\Java\jdk-17'
 $env:PATH = "$env:JAVA_HOME\bin;" + $env:PATH
 ```
 
-Чтобы задать `JAVA_HOME` системно (в Windows):
+To set `JAVA_HOME` system-wide (Windows):
 
 ```powershell
 [Environment]::SetEnvironmentVariable('JAVA_HOME','C:\Program Files\Java\jdk-17','Machine')
 ```
 
-На Linux/macOS добавьте в `~/.bashrc`/`~/.zshrc`:
+On Linux/macOS, add to `~/.bashrc` or `~/.zshrc`:
 
 ```sh
 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk
@@ -64,11 +69,11 @@ export PATH="$JAVA_HOME/bin:$PATH"
 mvn clean package -DskipTests
 ```
 
-Если вы хотите получить переносимый "fat-jar" (включает зависимости), в проект уже добавлен Maven Shade — после успешной сборки в `target/` будет исполняемый `krpsim-1.0.jar`.
+If you want to get a portable fat-jar (includes dependencies), Maven Shade is already configured — after a successful build the executable `krpsim-1.0.jar` will appear in `target/`.
 
 ### 2. Run Simulator Locally
 
-Change the scenario file (`krpsim/simple`, `krpsim/pomme`, etc.) as you wish:
+Change the scenario file (`krpsim/simple`, `krpsim/pomme`, etc.) as needed:
 
 ```bash
 java -jar target/krpsim-1.0.jar krpsim/simple
@@ -78,67 +83,72 @@ java -jar target/krpsim-1.0.jar krpsim/pomme
 ### 3. Build & Run with Docker (using Makefile)
 
 **Build the Docker image:**
+
 ```bash
 make build
 ```
 
 **Run the default scenario (`krpsim/simple`) in Docker:**
+
 ```bash
 make run
 ```
 
-**Open interactive shell in Docker (for manual tests):**
+**Open an interactive shell inside Docker (for manual tests):**
+
 ```bash
 make shell
-# Then inside container:
+# Then inside the container:
 java -jar app.jar krpsim/pomme
 java -jar app.jar krpsim/inception
 # (and any other scenario file)
 ```
 
 **Remove Docker image:**
+
 ```bash
 make clean
 ```
 
-### Using the Makefile (универсально)
+### Using the Makefile (universal way)
 
-- `make run` — попробует запустить локальный `target/krpsim-1.0.jar`, если он есть; иначе соберёт Docker-образ и запустит внутри контейнера. Можно переопределить сценарий и шаги:
+* `make run` — tries to run local `target/krpsim-1.0.jar` if it exists, otherwise builds a Docker image and runs inside a container.
+  You can override scenario and steps:
 
 ```bash
 make run SCENARIO=krpsim/pomme STEPS=200
 ```
 
-- `make mvn-build` или `make jar` — запустит `mvn clean package -DskipTests` и создаст `target/krpsim-1.0.jar`.
-- `make build` или `make docker-build` — соберёт Docker-образ `krpsim`.
-- `make shell` — откроет `/bin/bash` внутри образа (полезно для отладки).
+* `make mvn-build` or `make jar` — runs `mvn clean package -DskipTests` and creates `target/krpsim-1.0.jar`.
+* `make build` or `make docker-build` — builds Docker image `krpsim`.
+* `make shell` — opens `/bin/bash` inside the image (useful for debugging).
 
-Если на вашей машине нет `make` (часто на Windows), используйте `make.ps1` (PowerShell) из корня проекта, он повторяет те же цели:
+If your machine does not have `make` (common on Windows), use `make.ps1` (PowerShell) from the project root; it mirrors the same targets:
 
 ```powershell
-# Пример (PowerShell)
+# Example (PowerShell)
 .\make.ps1 mvn-build
 .\make.ps1 run -Scenario krpsim/simple -Steps 100
 .\make.ps1 build
 ```
 
-`make.ps1` автоматом использует локальный jar если он есть, или собирает и запускает Docker-образ как и `make run`.
+`make.ps1` automatically uses the local jar if it exists or builds/runs the Docker image just like `make run`.
 
 ## How to Test Different Scenarios
 
-- All scenario files are in the `krpsim/` folder: `simple`, `pomme`, `inception`, `ikea`, `recre`, `steak`.
-- Just change the file name after `krpsim/` when running the jar.
-- You can create your own test files in this folder following the structure of others.
+* All scenario files are located in the `krpsim/` folder: `simple`, `pomme`, `inception`, `ikea`, `recre`, `steak`.
+* Simply change the file name after `krpsim/` when running the jar.
+* You can create your own test files in this folder following the structure of the existing ones.
 
 ## Troubleshooting
 
-- Check existence of scenario files before running commands!
-- For Docker: make sure Docker is installed and running.
-- For Java: use Java 17 or newer.
+* Check that scenario files exist before running commands!
+* For Docker: ensure Docker is installed and running.
+* For Java: use Java 17 or newer.
 
-### Быстрые варианты запуска (если хотите запускать на любой машине)
+### Quick Run Options (if you want to run on any machine)
 
-- Локально (после `mvn package`):
+* Locally (after `mvn package`):
 
 ```powershell
 # Windows PowerShell
@@ -148,14 +158,14 @@ make run SCENARIO=krpsim/pomme STEPS=200
 ./run.sh krpsim/simple 100
 ```
 
-- Через Docker (самый портируемый способ — Docker обеспечивает одинаковую среду):
+* Via Docker (most portable — Docker ensures the same environment):
 
 ```powershell
 docker build -t krpsim .
 docker run --rm krpsim
 ```
 
-Если нужно передать другой сценарий через Docker:
+If you need to pass a different scenario via Docker:
 
 ```powershell
 docker run --rm krpsim java -jar app.jar krpsim/pomme 100
@@ -168,3 +178,5 @@ Feel free to fork, contribute, or report issues!
 ---
 
 Made with ❤️ for simulation experiments!
+
+---
