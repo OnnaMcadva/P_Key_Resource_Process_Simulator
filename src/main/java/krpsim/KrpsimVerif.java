@@ -5,7 +5,11 @@ import krpsim.utils.Parser;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
-import java.util.*;
+
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
 
 public class KrpsimVerif {
     public static void main(String[] args) throws Exception {
