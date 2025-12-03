@@ -21,26 +21,25 @@ public class Krpsim {
 
     public static void main(String[] args) throws Exception {
         // System.setProperty("file.encoding", "UTF-8");
-
-        // Display emojis at startup (for fun)
         System.out.println("🙂 🚀 🔧 🧩");
 
-        // Check for correct number of arguments
         if (args.length != 2) {
-            System.out.println("\u001B[32mUsage:\u001B[0m krpsim <file> <delay>");
+            System.out.println("\u001B[32mUsage:\u001B[0m krpsim <file> <maxDelay>");
             return;
         }
 
         String file = args[0];
-        int maxDelay = Integer.parseInt(args[1]); // throws Exception 🧩
 
-        // Parse configuration from file
+        int maxDelay = 100;
+        try {
+            maxDelay = Integer.parseInt(args[1]);
+        } catch (NumberFormatException e) {
+            System.out.println("\u001B[32mIncorrect maxDelay argument, using the default value: 100\u001B[0m");
+        }
+
         var config = Parser.parse(file);
-
-        // Run the simulation
         var result = simulate(config, maxDelay);
 
-        // Summary information about the simulation
         System.out.println("Nice file! " + config.processes().size() + " processes, " +
             config.initialStocks().size() + " stocks, " + config.optimizeTargets().size() + " to optimize");
 
