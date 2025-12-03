@@ -24,7 +24,7 @@ public class Krpsim {
         System.out.println("🙂 🚀 🔧 🧩");
 
         if (args.length != 2) {
-            System.out.println("\u001B[32mUsage:\u001B[0m krpsim <file> <maxDelay>");
+            System.out.println("\u001B[32mUsage:\u001B[0m krpsim <configFile> <maxDelay>");
             return;
         }
 
@@ -44,7 +44,7 @@ public class Krpsim {
             config.initialStocks().size() + " stocks, " + config.optimizeTargets().size() + " to optimize");
 
         System.out.println("Evaluating .................. done.");
-        System.out.println("Main walk");
+        System.out.println("\u001B[33mMain walk\u001B[0m");
 
         // Print the simulation trace
         for (String line : result.trace) {
