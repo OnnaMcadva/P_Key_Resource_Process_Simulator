@@ -58,6 +58,13 @@ To set `JAVA_HOME` system-wide (Windows):
 On Linux/macOS, add to `~/.bashrc` or `~/.zshrc`:
 
 ```sh
+echo 'export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64' >> ~/.bashrc
+echo 'export PATH=$JAVA_HOME/bin:$PATH' >> ~/.bashrc
+source ~/.bashrc
+echo $JAVA_HOME
+
+or
+
 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk
 export PATH="$JAVA_HOME/bin:$PATH"
 ```
