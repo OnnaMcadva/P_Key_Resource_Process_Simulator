@@ -38,6 +38,7 @@ P_Key_Resource_Process_Simulator is a Java-based simulator for process and resou
 
 ```powershell
 java -version
+javac -version
 mvn -v
 ```
 

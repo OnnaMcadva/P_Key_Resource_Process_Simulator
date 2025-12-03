@@ -20,6 +20,8 @@ import java.util.Comparator;
 public class Krpsim {
 
     public static void main(String[] args) throws Exception {
+        // System.setProperty("file.encoding", "UTF-8");
+
         // Display emojis at startup (for fun)
         System.out.println("🙂 🚀 🔧 🧩");
 
