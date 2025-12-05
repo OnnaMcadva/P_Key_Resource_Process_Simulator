@@ -1,0 +1,32 @@
+services:
+
+##### DOCKERS #####
+
+  krpsim:
+    build:
+      context: krpsim
+      dockerfile: Dockerfile
+    container_name: krpsim
+    ports:
+      - "443:443"
+    restart: always
+    networks:
+      - front-tier
+
+##### RESOURCES #####
+
+# volumes:
+#   db-data:
+#     driver_opts:
+#       o: bind
+#       type: none
+#       device: ~/data/db
+#   wp-data:
+#     driver_opts:
+#       o: bind
+#       type: none
+#       device: ~/data/wp
+
+networks:
+  front-tier: {}
+  back-tier: {}
