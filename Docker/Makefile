@@ -1,10 +1,10 @@
 name = krpsim
 
-all: src
+all: src files
 	@printf "Up ${name}:\n"
 	@COMPOSE_BAKE=true docker compose -f docker-compose.yml up -d
 
-build: src
+build: src files
 	@printf "Build ${name}:\n"
 	@COMPOSE_BAKE=true docker compose --build
 
@@ -12,7 +12,7 @@ down:
 	@printf "Down ${name} (stop and remove containers, networks):\n"
 	@COMPOSE_BAKE=true docker compose -f docker-compose.yml down
 
-re: down src
+re: down src files
 	@printf "Rebuild ${name}:\n"
 	@COMPOSE_BAKE=true docker compose -f docker-compose.yml up -d --build
 
@@ -20,6 +20,11 @@ src:
 	@rm -fR ${name}/src
 	@mkdir -p ${name}/src
 	@cp -a ../src/. ./${name}/src/
+
+files:
+	@rm -fR ${name}/files
+	@mkdir -p ${name}/files
+	@cp -a ../krpsim/. ./${name}/files/
 
 clean: down
 	@printf "Clean ${name}:\n"
@@ -36,4 +41,4 @@ env:
 bash:
 	@docker exec -it ${name} bash
 
-.PHONY  : all build down re src clean fclean env bash
+.PHONY  : all build down re src files clean fclean env bash

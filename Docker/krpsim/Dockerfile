@@ -2,6 +2,8 @@ FROM eclipse-temurin:17
 RUN mkdir -p /opt/krpsim
 RUN mkdir -p /opt/krpsim/src
 COPY src /opt/krpsim/src/
+RUN mkdir -p /opt/krpsim/files
+COPY files /opt/krpsim/files/
 WORKDIR /opt/krpsim/src/main/java/
 RUN javac -d ../out $(find . -name "*.java")
 WORKDIR /opt/krpsim/src/main/
