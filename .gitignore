@@ -13,8 +13,9 @@ buildNumber.properties
 # Compiled class files
 *.class
 
-# Package Files
-*.jar
+# Package Files (exclude built artifacts in target/)
+target/*.jar
+target/*.war
 *.war
 *.nar
 *.ear
@@ -49,6 +50,8 @@ logs/
 # Temporary files
 *.tmp
 *.temp
+trace*.txt
+*.trace
 
 # Unit test reports
 TEST*.xml
