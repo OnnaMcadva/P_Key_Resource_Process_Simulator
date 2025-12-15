@@ -189,7 +189,7 @@ public class Krpsim {
         int finalTime;
         boolean finished;
         if (!reachedDelay) {
-            // Успешно дошли до окончания (нет активных процессов и нечего запустить)
+            // Successfully reached the end (no active processes and nothing to run)
             finished = true;
             finalTime = (lastCompletionTime >= 0) ? (lastCompletionTime + 1) : 0;
         } else {
