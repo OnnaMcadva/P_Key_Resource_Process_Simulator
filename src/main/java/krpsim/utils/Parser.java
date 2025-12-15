@@ -28,7 +28,8 @@ import java.util.regex.Pattern;
 public class Parser {
 
     // Pattern to detect stock lines, e.g., "iron:5"
-    private static final Pattern STOCK_PATTERN = Pattern.compile("^([^#].*?):(\\d+)$");
+    // Must NOT contain parentheses to avoid matching process lines
+    private static final Pattern STOCK_PATTERN = Pattern.compile("^([^#:()]+):(\\d+)$");
 
     // Pattern to detect process lines, e.g., "Proc1:(iron:2;wood:3):(plank:5):10"
     private static final Pattern PROCESS_PATTERN = Pattern.compile(

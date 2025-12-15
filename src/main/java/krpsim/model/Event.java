@@ -19,8 +19,13 @@ public record Event(int time, String processName)
      *         positive if this event occurs after the other
      */
     @Override
-    public int compareTo(Event o) {
-        // Integer.compare handles the comparison safely and returns -1, 0, or 1
-        return Integer.compare(this.time, o.time);
+    public int compareTo(Event other) {
+        int c = Integer.compare(this.time, other.time);
+        if (c != 0) return c;
+        return this.processName.compareTo(other.processName);
     }
+    // public int compareTo(Event o) {
+    //     // Integer.compare handles the comparison safely and returns -1, 0, or 1
+    //     return Integer.compare(this.time, o.time);
+    // }
 }

@@ -5,150 +5,123 @@ import krpsim.utils.Parser;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
-
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.HashMap;
+import java.util.*;
 
 /**
- * KrpsimVerif is a program to verify a simulation trace
- * against a given configuration file.
+ * Trace verification program for krpsim.
  * 
- * Usage: java KrpsimVerif <configFile> <traceFile>
+ * Expects trace to contain lines in the format "time:processName" representing process start times.
+ * Validates that at each start time, sufficient resources are available to begin the process.
+ *
+ * Usage: java krpsim.KrpsimVerif <configFile> <traceFile>
  */
 public class KrpsimVerif {
 
     public static void main(String[] args) throws Exception {
-        // Check if correct number of arguments is provided
         if (args.length != 2) {
             System.out.println("Usage: krpsim_verif <config> <trace>");
             return;
         }
-
-        String configFile = args[0];
-        String traceFile = args[1];
-
-        // Parse configuration file using Parser
-        var config = Parser.parse(configFile);
-
-        // Read trace file lines into a list
+        var config = Parser.parse(args[0]);
         List<String> trace = new ArrayList<>();
-        try (BufferedReader br = new BufferedReader(new FileReader(traceFile))) {
+        try (BufferedReader br = new BufferedReader(new FileReader(args[1]))) {
             String line;
             while ((line = br.readLine()) != null) {
-                if (!line.trim().isEmpty()) trace.add(line.trim());
+                if (!line.isBlank()) trace.add(line.trim());
             }
         }
-
-        // Verify the trace against the configuration
         verify(config, trace);
     }
 
-    /**
-     * Verifies the simulation trace against the configuration.
-     * @param config The parsed configuration object
-     * @param trace The list of trace lines
-     */
     private static void verify(Parser.Config config, List<String> trace) {
-        // Initialize current stocks and process map
-        Map<String, Integer> stocks = new HashMap<>(config.initialStocks());
-        Map<String, Process> processMap = new HashMap<>();
-        config.processes().forEach(p -> processMap.put(p.name(), p));
+        Map<String,Integer> stocks = new LinkedHashMap<>(config.initialStocks());
+        Map<String, Process> procMap = new HashMap<>();
+        for (Process p : config.processes()) procMap.put(p.name(), p);
 
-        // Track pending processes and their end times
-        Map<String, Integer> pending = new HashMap<>();
+        // pending: key -> completion time
+        Map<String,Integer> pending = new HashMap<>();
         int currentTime = 0;
+        int lastCompletionTime = -1;
 
         for (String line : trace) {
             String[] parts = line.split(":", 2);
-            int time = Integer.parseInt(parts[0]);
+            if (parts.length != 2) {
+                System.out.println("ERROR: Bad trace line: " + line);
+                printFinal(stocks, currentTime);
+                return;
+            }
+            int time;
+            try { time = Integer.parseInt(parts[0]); }
+            catch (NumberFormatException ex) {
+                System.out.println("ERROR: Bad time in trace: " + parts[0]);
+                printFinal(stocks, currentTime);
+                return;
+            }
             String procName = parts[1];
 
-            // Advance time and apply completed processes
-            while (currentTime < time) {
-                applyCompleted(stocks, pending, currentTime, processMap);
-                currentTime++;
+            // Apply completions up to time (inclusive of those finishing <= time)
+            while (!pending.isEmpty() && pending.values().stream().min(Integer::compareTo).orElse(Integer.MAX_VALUE) <= time) {
+                int tmin = pending.values().stream().min(Integer::compareTo).orElse(Integer.MAX_VALUE);
+                // advance to tmin
+                applyCompleted(stocks, pending, tmin, procMap);
+                lastCompletionTime = Math.max(lastCompletionTime, tmin);
+                currentTime = tmin;
             }
+            // advance currentTime to trace time
+            currentTime = Math.max(currentTime, time);
 
-            Process p = processMap.get(procName);
+            Process p = procMap.get(procName);
             if (p == null) {
                 System.out.println("ERROR: Unknown process " + procName + " at cycle " + time);
-                printFinal(stocks, time);
+                printFinal(stocks, currentTime);
                 return;
             }
 
-            // Check if enough resources are available to start the process
+            // Check if sufficient resources are available to start the process
             for (var need : p.needs().entrySet()) {
-                int available = stocks.getOrDefault(need.getKey(), 0);
-                if (available < need.getValue()) {
-                    System.out.println("ERROR: Not enough " + need.getKey() +
-                        " at cycle " + time + " for " + procName);
-                    printFinal(stocks, time);
+                int avail = stocks.getOrDefault(need.getKey(), 0);
+                if (avail < need.getValue()) {
+                    System.out.println("ERROR: Not enough " + need.getKey() + " at cycle " + time + " for " + procName);
+                    printFinal(stocks, currentTime);
                     return;
                 }
             }
 
-            // Consume resources and add process to pending list
-            consume(stocks, p);
+            // Consume resources and schedule for completion
+            p.needs().forEach((k,v) -> stocks.merge(k, -v, Integer::sum));
             pending.put(procName + "@" + time, time + p.delay());
         }
 
-        // Finish all pending processes
+        // After all trace lines, finish remaining pending processes
         while (!pending.isEmpty()) {
-            applyCompleted(stocks, pending, currentTime, processMap);
-            currentTime++;
+            int tmin = pending.values().stream().min(Integer::compareTo).orElse(Integer.MAX_VALUE);
+            applyCompleted(stocks, pending, tmin, procMap);
+            lastCompletionTime = Math.max(lastCompletionTime, tmin);
+            currentTime = tmin;
         }
 
-        // Print success message and final stock values
         System.out.println("Trace is correct!");
-        printFinal(stocks, currentTime - 1);
+        printFinal(stocks, (lastCompletionTime >= 0) ? (lastCompletionTime + 1) : currentTime);
     }
 
-    /**
-     * Applies results of all processes that have completed at the current time.
-     * @param stocks Current stock quantities
-     * @param pending Pending processes with their end times
-     * @param time Current simulation time
-     * @param processMap Map of process name to Process object
-     */
-    private static void applyCompleted(Map<String, Integer> stocks, Map<String, Integer> pending,
-                                       int time, Map<String, Process> processMap) {
-        pending.entrySet().removeIf(e -> {
+    private static void applyCompleted(Map<String,Integer> stocks, Map<String,Integer> pending, int time, Map<String,Process> procMap) {
+        // Find all processes completing at <= time and apply their results
+        List<String> toRemove = new ArrayList<>();
+        for (var e : pending.entrySet()) {
             if (e.getValue() <= time) {
-                String procName = e.getKey().split("@")[0];
-                Process p = processMap.get(procName);
-                if (p != null) applyResults(stocks, p);
-                return true;
+                String procKey = e.getKey();
+                String procName = procKey.split("@")[0];
+                Process p = procMap.get(procName);
+                if (p != null) {
+                    p.results().forEach((k,v) -> stocks.merge(k, v, Integer::sum));
+                }
+                toRemove.add(procKey);
             }
-            return false;
-        });
+        }
+        toRemove.forEach(pending::remove);
     }
 
-    /**
-     * Consumes resources required by a process.
-     * @param stocks Current stock quantities
-     * @param p Process to consume resources for
-     */
-    private static void consume(Map<String, Integer> stocks, Process p) {
-        p.needs().forEach((k, v) -> stocks.merge(k, -v, Integer::sum));
-    }
-
-    /**
-     * Applies the results produced by a process to the stock.
-     * @param stocks Current stock quantities
-     * @param p Process whose results are applied
-     */
-    private static void applyResults(Map<String, Integer> stocks, Process p) {
-        p.results().forEach((k, v) -> stocks.merge(k, v, Integer::sum));
-    }
-
-    /**
-     * Prints the final stock quantities at the end of simulation.
-     * @param stocks Current stock quantities
-     * @param time Simulation time
-     */
-    private static void printFinal(Map<String, Integer> stocks, int time) {
+    private static void printFinal(Map<String,Integer> stocks, int time) {
         System.out.println("Final stocks at cycle " + time + ":");
         stocks.entrySet().stream()
             .sorted(Map.Entry.comparingByKey())
