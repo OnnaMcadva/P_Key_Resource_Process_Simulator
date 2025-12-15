@@ -2,6 +2,7 @@ package krpsim;
 
 import krpsim.optimizer.*;
 import krpsim.utils.Parser;
+import krpsim.visualizer.SimulationVisualizer;
 
 import java.util.*;
 
@@ -18,11 +19,12 @@ public class Krpsim {
 
     public static void main(String[] args) throws Exception {
         if (args.length < 2) {
-            System.out.println("Usage: krpsim <configFile> <maxDelay> [--optimize-level N]");
+            System.out.println("Usage: krpsim <configFile> <maxDelay> [--optimize-level N] [--visualize]");
             System.out.println("  Optimization levels:");
             System.out.println("    0 = Greedy (fast, default)");
             System.out.println("    1 = Beam Search (good quality)");
             System.out.println("    2 = Branch & Bound A* (best quality, slower)");
+            System.out.println("  --visualize: Show GUI with Gantt chart and resource graphs");
             return;
         }
 
@@ -36,6 +38,8 @@ public class Krpsim {
 
         // Parse optimization level
         int optimizeLevel = 0; // default: greedy
+        boolean visualize = false;
+        
         for (int i = 2; i < args.length; i++) {
             if (args[i].equals("--optimize-level") && i + 1 < args.length) {
                 try {
@@ -47,7 +51,9 @@ public class Krpsim {
                 } catch (NumberFormatException ex) {
                     System.err.println("Warning: Invalid optimize-level. Using default (0).");
                 }
-                break;
+                i++; // skip next arg
+            } else if (args[i].equals("--visualize")) {
+                visualize = true;
             }
         }
 
@@ -83,6 +89,11 @@ public class Krpsim {
             System.err.println("Reached delay " + maxDelay);
         }
 
+        
+        // Show visualization if requested
+        if (visualize) {
+            SimulationVisualizer.show(result, config, maxDelay);
+        }
         System.err.println("Stock :");
         // Print stocks in alphabetical order like example
         result.finalStocks().entrySet().stream()
