@@ -70,3 +70,8 @@ $RECYCLE.BIN/
 # Docker
 !.dockerignore
 !Dockerfile
+# Test artifacts & generated reports
+TESTING_RESULTS.txt
+trace*.txt
+*.trace
+

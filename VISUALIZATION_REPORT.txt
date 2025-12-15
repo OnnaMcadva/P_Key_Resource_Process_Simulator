@@ -1,0 +1,105 @@
+
+             KRPSim Visualization System Report                    
+                    December 15, 2025                              
+═
+
+─
+VISUALIZATION COMPONENTS
+
+
+1. SimulationVisualizer.java (5.2KB)
+    Type: Main JFrame window
+    Size: 1400x850 pixels
+    Interface: Tabbed pane with 3 tabs
+    Framework: Java Swing (javax.swing)
+    Key Features:
+       JTabbedPane for tab management
+       GanttChartPanel integration
+       ResourceGraphPanel integration
+       Summary statistics display
+       BorderLayout for organization
+
+2. GanttChartPanel.java (6.9KB)
+    Type: JPanel (graphics component)
+    Rendering: Custom paintComponent
+    Data: ProcessExecution array
+    Features:
+       Timeline rendering (X-axis: time)
+       Process bars (Y-axis: processes)
+       Color coding for process types
+       Start/end time visualization
+       Process dependency indication
+       Hover/click event handling
+
+3. ResourceGraphPanel.java (8.8KB)
+    Type: JPanel (graphics component)
+    Rendering: Custom paintComponent
+    Data: ResourceSnapshot array
+    Features:
+       Multi-line graph rendering
+       Resource tracking over time
+       Color coding per resource
+       Y-axis scaling
+       Time-based X-axis
+       Real-time evolution display
+
+
+ARCHITECTURE
+
+
+Entry Point: Krpsim.java (main class)
+ Command-line: --visualize flag
+ OptimizationStrategy.optimize()  OptimizationResult
+ SimulationVisualizer.show(result, config, maxDelay)
+   Create JFrame instance
+   Initialize three panels:
+     GanttChartPanel (process timeline)
+     ResourceGraphPanel (evolution graphs)
+     Summary Panel (statistics)
+   Display window
+ Block until user closes window
+
+Data Flow:
+OptimizationResult  Visualizer  Panels  Graphics2D  Screen
+
+
+SUPPORTED SCENARIOS
+
+
+ simple (3 processes, 4 stocks)
+  Command: java -jar target/krpsim-1.0.jar krpsim/simple 50 --visualize
+
+ ikea (4 processes, 5 stocks)
+  Command: java -jar target/krpsim-1.0.jar krpsim/ikea 50 --visualize
+
+ coffee_shop (12 processes, 12 stocks) - MOST COMPLEX
+  Command: java -jar target/krpsim-1.0.jar krpsim/coffee_shop 100 --visualize
+
+ solar_system (30 lines, complex dependencies)
+  Command: java -jar target/krpsim-1.0.jar krpsim/solar_system 100 --visualize
+
+ inception (26 processes)
+  Command: java -jar target/krpsim-1.0.jar krpsim/inception 50 --visualize
+
+ pomme (31 lines)
+  Command: java -jar target/krpsim-1.0.jar krpsim/pomme 50 --visualize
+
+ steak (21 processes)
+  Command: java -jar target/krpsim-1.0.jar krpsim/steak 50 --visualize
+
+ recre (21 processes)
+  Command: java -jar target/krpsim-1.0.jar krpsim/recre 50 --visualize
+
+
+GANTT CHART TAB
+
+
+What It Shows:
+ Horizontal timeline from 0 to maxDelay
+ One row per process type
+ Colored rectangles for process executions
+ Process start and end times
+ Sequential/parallel execution patterns
+
+Data Source: OptimizationResult.trace()
+ Each trace line: 
