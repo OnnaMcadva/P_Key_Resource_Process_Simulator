@@ -1,0 +1,30 @@
+#
+# Solar Energy System (INFINITE)
+# An autonomous solar energy production system that can run indefinitely.
+# Solar panels generate energy which powers systems that maintain the infrastructure.
+# This creates a self-sustaining cycle that never ends.
+#
+# Initial resources
+sun_rays:1000000
+installed_panels:10
+energy:0
+maintenance_kit:5
+
+# Infinite energy generation from solar panels
+solar_generation:(sun_rays:10;installed_panels:1):(sun_rays:1;energy:50;installed_panels:1):5
+
+# Energy to maintenance energy (keeps system going)
+maintain_system:(energy:5):(energy:1):2
+
+# Energy to expand panels (creates growth cycle)
+install_panel:(energy:20):(installed_panels:1):30
+
+# Energy back to sun simulation (completes the cycle)
+recycle_energy:(energy:5):(sun_rays:50):8
+
+# Power productivity systems
+power_lab:(energy:10):(research:1):20
+apply_research:(research:1;installed_panels:1):(installed_panels:2):50
+
+# Optimization targets - maximize energy and research indefinitely
+optimize:(energy;research)
