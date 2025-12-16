@@ -80,3 +80,24 @@
 - **HashSet/HashMap**: поиск O(1) в среднем
 - **TreeSet/TreeMap**: операции O(log n)
 
+---
+
+## Пакетное тестирование сценариев KRPSim
+
+- Windows PowerShell:
+	- Запуск всех сценариев (plain, 0/1/2 и проверка):
+		- `scripts/run_all.ps1 [-Steps 200]`
+	- Визуализация каждого (по очереди, нужно закрывать окно):
+		- `scripts/visualize_all.ps1 [-Steps 100]`
+
+- Linux/WSL (bash):
+	- Запуск всех сценариев (plain, 0/1/2 и проверка):
+		- `STEPS=200 scripts/run_all.sh`
+	- Визуализация каждого (по очереди, с паузой):
+		- `STEPS=100 scripts/visualize_all.sh`
+
+Результаты сохраняются в папке `out/`:
+- логи stderr: `out/logs/*.stderr.txt`
+- трассы (stdout): `out/traces/*.trace`
+- отчёты верификации: `out/verify/*.verify.txt`
+
