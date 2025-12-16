@@ -314,3 +314,224 @@ public class BeamSearchOptimizer implements OptimizationStrategy {
         p.results().forEach((k, v) -> stocks.merge(k, v, Integer::sum));
     }
 }
+
+
+
+// package krpsim.optimizer;
+
+// import krpsim.model.Event;
+// import krpsim.model.Process;
+// import krpsim.utils.Parser;
+
+// import java.util.*;
+
+// /**
+//  * Beam Search optimization strategy (исправленная и упрощённая версия).
+//  */
+// public class BeamSearchOptimizer implements OptimizationStrategy {
+
+//     private static final int DEFAULT_BEAM_WIDTH = 8;
+//     private final int beamWidth;
+
+//     public BeamSearchOptimizer() {
+//         this(DEFAULT_BEAM_WIDTH);
+//     }
+
+//     public BeamSearchOptimizer(int beamWidth) {
+//         this.beamWidth = beamWidth;
+//     }
+
+//     @Override
+//     public String getName() {
+//         return "Beam Search (width=" + beamWidth + ")";
+//     }
+
+//     /* ======================= STATE ======================= */
+
+//     private static class SearchState {
+//         Map<String, Integer> stocks;
+//         PriorityQueue<Event> active;
+//         List<String> trace;
+//         int time;
+//         double score;
+
+//         SearchState(Map<String, Integer> stocks,
+//                     PriorityQueue<Event> active,
+//                     List<String> trace,
+//                     int time,
+//                     double score) {
+//             this.stocks = new LinkedHashMap<>(stocks);
+//             this.active = new PriorityQueue<>(active);
+//             this.trace = new ArrayList<>(trace);
+//             this.time = time;
+//             this.score = score;
+//         }
+
+//         SearchState copy() {
+//             return new SearchState(stocks, active, trace, time, score);
+//         }
+//     }
+
+//     /* ======================= MAIN ======================= */
+
+//     @Override
+//     public OptimizationResult optimize(Parser.Config config, int maxDelay) {
+//         List<Process> processes = config.processes();
+//         Set<String> optimize = config.optimizeTargets();
+
+//         PriorityQueue<SearchState> beam = new PriorityQueue<>(
+//                 Comparator.comparingDouble((SearchState s) -> s.score).reversed()
+//         );
+
+//         SearchState start = new SearchState(
+//                 config.initialStocks(),
+//                 new PriorityQueue<>(),
+//                 new ArrayList<>(),
+//                 0,
+//                 0
+//         );
+//         beam.add(start);
+
+//         SearchState best = null;
+//         double bestScore = Double.NEGATIVE_INFINITY;
+
+//         while (!beam.isEmpty()) {
+//             List<SearchState> nextLayer = new ArrayList<>();
+
+//             for (SearchState state : beam) {
+//                 completeFinished(state, processes);
+
+//                 if (state.time > maxDelay) {
+//                     double finalScore = calculateScore(state, optimize);
+//                     if (finalScore > bestScore) {
+//                         bestScore = finalScore;
+//                         best = state;
+//                     }
+//                     continue;
+//                 }
+
+//                 List<Process> runnable = getRunnable(state.stocks, processes);
+
+//                 if (!runnable.isEmpty()) {
+//                     for (Process p : runnable) {
+//                         SearchState ns = state.copy();
+//                         consume(ns.stocks, p);
+//                         ns.active.add(new Event(ns.time + p.delay(), p.name()));
+//                         ns.trace.add(ns.time + ":" + p.name());
+//                         ns.score = heuristic(ns, optimize, maxDelay, processes);
+//                         nextLayer.add(ns);
+//                     }
+//                 }
+
+//                 if (!state.active.isEmpty()) {
+//                     SearchState wait = state.copy();
+//                     wait.time = state.active.peek().time();
+//                     wait.score = heuristic(wait, optimize, maxDelay, processes);
+//                     nextLayer.add(wait);
+//                 }
+//             }
+
+//             beam.clear();
+//             nextLayer.sort(Comparator.comparingDouble((SearchState s) -> s.score).reversed());
+//             for (int i = 0; i < Math.min(beamWidth, nextLayer.size()); i++) {
+//                 beam.add(nextLayer.get(i));
+//             }
+//         }
+
+//         if (best == null) return new GreedyOptimizer().optimize(config, maxDelay);
+
+//         while (!best.active.isEmpty()) {
+//             Event ev = best.active.poll();
+//             best.time = ev.time();
+//             Process p = find(processes, ev.processName());
+//             if (p != null) apply(best.stocks, p);
+//         }
+
+//         return new OptimizationResult(
+//                 List.copyOf(best.trace),
+//                 new LinkedHashMap<>(best.stocks),
+//                 best.time,
+//                 true,
+//                 calculateScore(best, optimize)
+//         );
+//     }
+
+//     /* ======================= HEURISTICS ======================= */
+
+//     private double heuristic(SearchState s,
+//                              Set<String> optimize,
+//                              int maxDelay,
+//                              List<Process> processes) {
+//         double v = 0;
+
+//         for (var e : s.stocks.entrySet()) {
+//             if (optimize.contains(e.getKey())) {
+//                 v += e.getValue() * 1000.0;
+//             } else {
+//                 v += e.getValue() * 5.0;
+//             }
+//         }
+
+//         int remaining = Math.max(0, maxDelay - s.time);
+//         double bestRate = 0;
+
+//         for (Process p : processes) {
+//             if (p.delay() == 0) continue;
+//             double gain = 0;
+//             for (var r : p.results().entrySet()) {
+//                 if (optimize.contains(r.getKey())) {
+//                     gain += r.getValue() * 1000.0;
+//                 }
+//             }
+//             bestRate = Math.max(bestRate, gain / p.delay());
+//         }
+
+//         return v + bestRate * remaining;
+//     }
+
+//     private double calculateScore(SearchState s, Set<String> optimize) {
+//         double score = 0;
+//         for (var e : s.stocks.entrySet()) {
+//             if (optimize.contains(e.getKey())) score += e.getValue() * 1000.0;
+//         }
+//         return score;
+//     }
+
+//     /* ======================= HELPERS ======================= */
+
+//     private void completeFinished(SearchState s, List<Process> processes) {
+//         while (!s.active.isEmpty() && s.active.peek().time() <= s.time) {
+//             Event ev = s.active.poll();
+//             Process p = find(processes, ev.processName());
+//             if (p != null) apply(s.stocks, p);
+//         }
+//     }
+
+//     private List<Process> getRunnable(Map<String, Integer> stocks, List<Process> processes) {
+//         List<Process> res = new ArrayList<>();
+//         for (Process p : processes) {
+//             boolean ok = true;
+//             for (var n : p.needs().entrySet()) {
+//                 if (stocks.getOrDefault(n.getKey(), 0) < n.getValue()) {
+//                     ok = false;
+//                     break;
+//                 }
+//             }
+//             if (ok) res.add(p);
+//         }
+//         return res;
+//     }
+
+//     private Process find(List<Process> ps, String name) {
+//         for (Process p : ps) if (p.name().equals(name)) return p;
+//         return null;
+//     }
+
+//     private void consume(Map<String, Integer> stocks, Process p) {
+//         p.needs().forEach((k, v) -> stocks.merge(k, -v, Integer::sum));
+//     }
+
+//     private void apply(Map<String, Integer> stocks, Process p) {
+//         p.results().forEach((k, v) -> stocks.merge(k, v, Integer::sum));
+//     }
+// }
