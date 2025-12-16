@@ -69,17 +69,19 @@ public class GreedyOptimizer implements OptimizationStrategy {
                 
                 List<Process> ordered;
                 if (optimize.contains("time")) {
-                    ordered = new ArrayList<>(processes);
+                    ordered = new ArrayList<>(candidates);
                 } else if (!Collections.disjoint(optimize, extractAllResultKeys(processes))) {
                     ordered = candidates.stream()
                         .sorted(priority.thenComparing(p -> processes.indexOf(p)))
                         .collect(Collectors.toList());
                 } else {
-                    ordered = new ArrayList<>(processes);
+                    ordered = new ArrayList<>(candidates);
                 }
-                
+
+                // Start each runnable процесс не более ОДНОГО раза за текущий тик,
+                // чтобы не заспамить сотнями одинаковых запусков.
                 for (Process p : ordered) {
-                    while (isRunnable(stocks, p)) {
+                    if (isRunnable(stocks, p)) {
                         if (currentTime > maxDelay) {
                             reachedDelay = true;
                             break;
@@ -89,10 +91,17 @@ public class GreedyOptimizer implements OptimizationStrategy {
                         active.add(new Event(currentTime + p.delay(), p.name()));
                         startedAny = true;
                     }
-                    if (reachedDelay) break;
                 }
-                
-                if (!startedAny) {
+                if (reachedDelay) break;
+
+                if (startedAny) {
+                    // Перейти к ближайшему завершению, чтобы применить результаты
+                    if (!active.isEmpty()) {
+                        currentTime = active.peek().time();
+                    } else {
+                        break;
+                    }
+                } else {
                     if (active.isEmpty()) break;
                     else currentTime = active.peek().time();
                 }

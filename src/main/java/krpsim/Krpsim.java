@@ -58,9 +58,10 @@ public class Krpsim {
         }
 
         // Select optimization strategy
+        // Strategy selection: 0=Greedy (mandatory), 1=Beam Search, 2=Branch & Bound
         OptimizationStrategy strategy = switch (optimizeLevel) {
-            case 1 -> new BeamSearchOptimizer(8);
-            case 2 -> new BranchAndBoundOptimizer(5000);
+            case 1 -> new BeamSearchOptimizer(16); // increased beam width for better exploration
+            case 2 -> new BranchAndBoundOptimizer(5000); // 5s for speed; no fallback
             default -> new GreedyOptimizer();
         };
 
@@ -74,13 +75,21 @@ public class Krpsim {
             allStocks.addAll(p.results().keySet());
         }
 
+        // Count all optimize targets exactly as provided (including time)
+        int optimizeCount = config.optimizeTargets().size();
         System.err.println("Nice file! " + config.processes().size() + " processes, " +
-            allStocks.size() + " stocks, " + config.optimizeTargets().size() + " to optimize");
+            allStocks.size() + " stocks, " + optimizeCount + " to optimize");
         System.err.println("Evaluating .................. done.");
         System.err.println("Main walk");
-
-        for (String line : result.trace()) {
-            System.out.println(line);
+        // Limit trace output to avoid flooding: show first 10 lines, then summarize the rest
+        final int MAX_TRACE_LINES = 10; 
+        List<String> trace = result.trace();
+        int linesToShow = Math.min(trace.size(), MAX_TRACE_LINES);
+        for (int i = 0; i < linesToShow; i++) {
+            System.out.println(trace.get(i));
+        }
+        if (trace.size() > MAX_TRACE_LINES) {
+            System.err.println("... truncated " + (trace.size() - MAX_TRACE_LINES) + " more entries ...");
         }
 
         if (result.finished()) {

@@ -81,6 +81,9 @@ public class BranchAndBoundOptimizer implements OptimizationStrategy {
         
         List<Process> processes = config.processes();
         Set<String> optimize = config.optimizeTargets();
+        Map<String, Integer> baseline = new HashMap<>();
+        // Baseline = 0 for optimize targets so spending (money) is not penalized; only gains matter
+        for (String k : optimize) baseline.put(k, 0);
         
         // Priority queue for A* search
         PriorityQueue<SearchState> openSet = new PriorityQueue<>();
@@ -92,7 +95,7 @@ public class BranchAndBoundOptimizer implements OptimizationStrategy {
             0,
             0.0,
             estimateUpperBound(new LinkedHashMap<>(config.initialStocks()), 0, 
-                             processes, optimize, maxDelay)
+                             processes, optimize, maxDelay, baseline)
         );
         openSet.add(initialState);
         
@@ -127,7 +130,7 @@ public class BranchAndBoundOptimizer implements OptimizationStrategy {
             }
             
             // Update actual score
-            current.actualScore = calculateActualScore(current.stocks, optimize, current.currentTime);
+            current.actualScore = calculateActualScore(current.stocks, optimize, current.currentTime, baseline);
             
             // Check if exceeded time limit
             if (current.currentTime > maxDelay) {
@@ -144,7 +147,7 @@ public class BranchAndBoundOptimizer implements OptimizationStrategy {
             if (candidates.isEmpty()) {
                 // Terminal state
                 if (current.activeProcesses.isEmpty()) {
-                    double finalScore = calculateActualScore(current.stocks, optimize, lastCompletionTime);
+                    double finalScore = calculateActualScore(current.stocks, optimize, lastCompletionTime, baseline);
                     if (finalScore > bestScore) {
                         bestScore = finalScore;
                         bestSolution = current.copy();
@@ -156,7 +159,7 @@ public class BranchAndBoundOptimizer implements OptimizationStrategy {
                     advanced.currentTime = advanced.activeProcesses.peek().time();
                     advanced.estimatedTotal = advanced.actualScore + 
                         estimateRemainingValue(advanced.stocks, advanced.currentTime, 
-                                              processes, optimize, maxDelay);
+                                              processes, optimize, maxDelay, baseline);
                     if (advanced.estimatedTotal >= bestScore) {
                         openSet.add(advanced);
                     }
@@ -169,10 +172,10 @@ public class BranchAndBoundOptimizer implements OptimizationStrategy {
                     newState.trace.add(newState.currentTime + ":" + p.name());
                     newState.activeProcesses.add(new Event(newState.currentTime + p.delay(), p.name()));
                     
-                    newState.actualScore = calculateActualScore(newState.stocks, optimize, newState.currentTime);
+                    newState.actualScore = calculateActualScore(newState.stocks, optimize, newState.currentTime, baseline);
                     newState.estimatedTotal = newState.actualScore + 
                         estimateRemainingValue(newState.stocks, newState.currentTime, 
-                                              processes, optimize, maxDelay);
+                                              processes, optimize, maxDelay, baseline);
                     
                     // Only add if this could potentially beat best
                     if (newState.estimatedTotal >= bestScore) {
@@ -196,7 +199,7 @@ public class BranchAndBoundOptimizer implements OptimizationStrategy {
             
             boolean finished = bestSolution.activeProcesses.isEmpty() && 
                              getRunnable(bestSolution.stocks, processes).isEmpty();
-            double finalScore = calculateActualScore(bestSolution.stocks, optimize, finalTime);
+            double finalScore = calculateActualScore(bestSolution.stocks, optimize, finalTime, baseline);
             
             return new OptimizationResult(
                 List.copyOf(bestSolution.trace),
@@ -207,7 +210,13 @@ public class BranchAndBoundOptimizer implements OptimizationStrategy {
             );
         }
         
-        // Fallback
+        // Fallback to greedy only if absolutely nothing was found
+        if (bestSolution == null) {
+            OptimizationStrategy fallback = new GreedyOptimizer();
+            return fallback.optimize(config, maxDelay);
+        }
+        
+        // Should not reach here since we always have initial state
         return new OptimizationResult(List.of(), new LinkedHashMap<>(), 0, true, 0.0);
     }
     
@@ -216,9 +225,10 @@ public class BranchAndBoundOptimizer implements OptimizationStrategy {
      * Assumes infinite resources and parallelism.
      */
     private double estimateUpperBound(Map<String, Integer> stocks, int currentTime,
-                                     List<Process> processes, Set<String> optimize, int maxDelay) {
-        double currentValue = calculateActualScore(stocks, optimize, currentTime);
-        double potentialValue = estimateRemainingValue(stocks, currentTime, processes, optimize, maxDelay);
+                                     List<Process> processes, Set<String> optimize, int maxDelay,
+                                     Map<String, Integer> baseline) {
+        double currentValue = calculateActualScore(stocks, optimize, currentTime, baseline);
+        double potentialValue = estimateRemainingValue(stocks, currentTime, processes, optimize, maxDelay, baseline);
         return currentValue + potentialValue;
     }
     
@@ -226,7 +236,8 @@ public class BranchAndBoundOptimizer implements OptimizationStrategy {
      * Optimistic estimate of value that can still be gained.
      */
     private double estimateRemainingValue(Map<String, Integer> stocks, int currentTime,
-                                         List<Process> processes, Set<String> optimize, int maxDelay) {
+                                         List<Process> processes, Set<String> optimize, int maxDelay,
+                                         Map<String, Integer> baseline) {
         int remainingTime = maxDelay - currentTime;
         if (remainingTime <= 0) return 0;
         
@@ -237,7 +248,8 @@ public class BranchAndBoundOptimizer implements OptimizationStrategy {
             double value = 0;
             for (var e : p.results().entrySet()) {
                 if (optimize.contains(e.getKey())) {
-                    value += e.getValue() * 1000.0;
+                    int base = baseline.getOrDefault(e.getKey(), 0);
+                    value += Math.max(0, e.getValue() - base) * 1000.0;
                 }
             }
             double rate = value / p.delay();
@@ -248,11 +260,13 @@ public class BranchAndBoundOptimizer implements OptimizationStrategy {
         return bestRatePerTime * remainingTime;
     }
     
-    private double calculateActualScore(Map<String, Integer> stocks, Set<String> optimize, int currentTime) {
+    private double calculateActualScore(Map<String, Integer> stocks, Set<String> optimize, int currentTime,
+                                       Map<String, Integer> baseline) {
         double score = 0;
         for (var e : stocks.entrySet()) {
             if (optimize.contains(e.getKey())) {
-                score += e.getValue() * 1000.0;
+                int base = baseline.getOrDefault(e.getKey(), 0);
+                score += (e.getValue() - base) * 1000.0;
             }
         }
         if (optimize.contains("time")) {
