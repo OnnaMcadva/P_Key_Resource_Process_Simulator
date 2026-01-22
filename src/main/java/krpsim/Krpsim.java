@@ -1,10 +1,16 @@
 package krpsim;
 
-import krpsim.optimizer.*;
+import krpsim.optimizer.OptimizationStrategy;
+import krpsim.optimizer.GreedyOptimizer;
+import krpsim.optimizer.BeamSearchOptimizer;
+import krpsim.optimizer.BranchAndBoundOptimizer;
 import krpsim.utils.Parser;
 import krpsim.visualizer.SimulationVisualizer;
 
-import java.util.*;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Main simulation class for the Key Resource Process Simulator (krpsim).
