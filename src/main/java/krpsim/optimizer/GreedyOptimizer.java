@@ -89,8 +89,8 @@ public class GreedyOptimizer implements OptimizationStrategy {
                     ordered = new ArrayList<>(candidates);
                 }
 
-                // Start each runnable процесс не более ОДНОГО раза за текущий тик,
-                // чтобы не заспамить сотнями одинаковых запусков.
+                // Start each runnable process once per tick
+                // to avoid spam with hundreds of identical launches
                 for (Process p : ordered) {
                     if (isRunnable(stocks, p)) {
                         if (currentTime > maxDelay) {
@@ -106,7 +106,7 @@ public class GreedyOptimizer implements OptimizationStrategy {
                 if (reachedDelay) break;
 
                 if (startedAny) {
-                    // Перейти к ближайшему завершению, чтобы применить результаты
+                    // Move to nearest completion to apply results
                     if (!active.isEmpty()) {
                         currentTime = active.peek().time();
                     } else {
