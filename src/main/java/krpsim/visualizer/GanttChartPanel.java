@@ -83,7 +83,6 @@ public class GanttChartPanel extends JPanel {
         int labelWidth = 200;
         int chartWidth = getWidth() - margin * 2 - labelWidth;
         int rowHeight = 40;
-        int chartHeight = config.processes().size() * rowHeight;
         
         int maxTime = executions.stream().mapToInt(e -> e.endTime).max().orElse(100);
         double timeScale = (double) chartWidth / maxTime;

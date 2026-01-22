@@ -6,7 +6,6 @@ import krpsim.utils.Parser;
 import javax.swing.*;
 import java.awt.*;
 import java.util.*;
-import java.util.List;
 
 /**
  * Main window for simulation visualization.

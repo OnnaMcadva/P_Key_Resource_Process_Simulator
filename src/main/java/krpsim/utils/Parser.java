@@ -1,7 +1,6 @@
 package krpsim.utils;
 
 import krpsim.model.Process;
-import krpsim.model.Stock;
 
 import java.io.BufferedReader;
 import java.io.FileReader;

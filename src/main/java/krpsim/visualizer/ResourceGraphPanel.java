@@ -20,7 +20,6 @@ public class ResourceGraphPanel extends JPanel {
     
     private final OptimizationStrategy.OptimizationResult result;
     private final Parser.Config config;
-    private final int maxDelay;
     private final Map<String, Color> resourceColors;
     
     private static class ResourceSnapshot {
@@ -37,7 +36,6 @@ public class ResourceGraphPanel extends JPanel {
                              Parser.Config config, int maxDelay) {
         this.result = result;
         this.config = config;
-        this.maxDelay = maxDelay;
         this.resourceColors = generateColors();
         setBackground(Color.WHITE);
     }
