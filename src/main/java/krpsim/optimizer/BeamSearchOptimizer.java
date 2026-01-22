@@ -78,6 +78,9 @@ public class BeamSearchOptimizer implements OptimizationStrategy {
         // Baseline = 0 for optimize targets: we reward gains above zero, spending allowed
         for (String k : optimize) baseline.put(k, 0);
         
+        // Build dependency graph: which processes are relevant for optimization targets
+        Set<Process> relevantProcesses = buildRelevantProcessGraph(processes, optimize);
+        
         // Initialize beam with starting state
         PriorityQueue<SearchState> beam = new PriorityQueue<>();
         SearchState initialState = new SearchState(
@@ -119,6 +122,13 @@ public class BeamSearchOptimizer implements OptimizationStrategy {
                 
                 // Generate successor states by trying to start each runnable process
                 List<Process> candidates = getRunnable(state.stocks, processes);
+                
+                // CRITICAL FIX: Filter only relevant processes that lead to optimization targets
+                if (!optimize.contains("time") || optimize.size() > 1) {
+                    candidates = candidates.stream()
+                        .filter(relevantProcesses::contains)
+                        .toList();
+                }
                 
                 if (candidates.isEmpty()) {
                     // No more processes can start
@@ -312,6 +322,50 @@ public class BeamSearchOptimizer implements OptimizationStrategy {
     
     private void applyResults(Map<String, Integer> stocks, Process p) {
         p.results().forEach((k, v) -> stocks.merge(k, v, Integer::sum));
+    }
+    
+    /**
+     * Builds a set of processes that are relevant for achieving optimization targets.
+     * Uses backward dependency analysis: starts from target resources and includes
+     * all processes that directly or indirectly produce them.
+     */
+    private Set<Process> buildRelevantProcessGraph(List<Process> processes, Set<String> optimize) {
+        Set<Process> relevant = new HashSet<>();
+        Set<String> neededResources = new HashSet<>();
+        
+        // Special case: if "time" is the only target, ALL processes are relevant
+        if (optimize.contains("time") && optimize.size() == 1) {
+            return new HashSet<>(processes);
+        }
+        
+        // Start with non-"time" optimization targets
+        for (String target : optimize) {
+            if (!target.equals("time")) {
+                neededResources.add(target);
+            }
+        }
+        
+        // Iteratively add processes that produce needed resources
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+            for (Process p : processes) {
+                if (relevant.contains(p)) continue;
+                
+                // Check if this process produces any needed resource
+                boolean producesNeeded = p.results().keySet().stream()
+                    .anyMatch(neededResources::contains);
+                
+                if (producesNeeded) {
+                    relevant.add(p);
+                    // Add this process's needs to the needed resources
+                    neededResources.addAll(p.needs().keySet());
+                    changed = true;
+                }
+            }
+        }
+        
+        return relevant;
     }
 }
 

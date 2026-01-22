@@ -1,0 +1,22 @@
+#
+# Test file to demonstrate relevant process filtering
+# We have two independent production chains:
+# Chain A: euro -> equipment -> product -> happy_client (TARGET)
+# Chain B: gold -> jewelry -> luxury_item (NOT TARGET - should be ignored!)
+#
+
+# Initial stocks
+euro:20
+gold:10
+
+# Chain A - leads to optimization target
+equipment_purchase:(euro:8):(equipment:1):5
+product_creation:(equipment:1):(product:1):10
+delivery:(product:1):(happy_client:1):5
+
+# Chain B - does NOT lead to optimization target (waste of resources!)
+jewelry_making:(gold:5):(jewelry:1):8
+luxury_packaging:(jewelry:1):(luxury_item:1):3
+
+# Only optimize happy_client (NOT luxury_item!)
+optimize:(happy_client)
