@@ -7,6 +7,8 @@ import krpsim.optimizer.BranchAndBoundOptimizer;
 import krpsim.utils.Parser;
 import krpsim.visualizer.SimulationVisualizer;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.List;
@@ -71,7 +73,17 @@ public class Krpsim {
             default -> new GreedyOptimizer();
         };
 
-        var config = Parser.parse(file);
+        // Parse config with friendly error if the file is missing
+        Parser.Config config;
+        try {
+            config = Parser.parse(file);
+        } catch (FileNotFoundException e) {
+            System.err.println("Error: file '" + file + "' not found. Check the path (e.g., krpsim/coffee_shop).");
+            return;
+        } catch (IOException e) {
+            System.err.println("Error reading file '" + file + "': " + e.getMessage());
+            return;
+        }
         var result = strategy.optimize(config, maxDelay);
 
         // Count all unique stocks (initial + those produced/consumed by processes)
