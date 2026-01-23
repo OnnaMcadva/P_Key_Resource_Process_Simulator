@@ -85,7 +85,7 @@ public class SimulationVisualizer extends JFrame {
         sb.append("  • Total process executions: ").append(result.trace().size()).append("\n");
         sb.append("  • Final time: ").append(result.finalTime()).append("\n");
         sb.append("  • Status: ").append(result.finished() ? "Completed" : "Reached time limit").append("\n");
-        sb.append("  • Optimization score: ").append(String.format("%.2f", result.score())).append("\n\n");
+        sb.append("  • Optimization score: ").append("%.2f".formatted(result.score())).append("\n\n");
         
         sb.append("Initial stocks:\n");
         config.initialStocks().forEach((k, v) -> 

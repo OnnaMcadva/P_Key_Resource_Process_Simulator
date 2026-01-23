@@ -87,7 +87,7 @@ public class ResourceGraphPanel extends JPanel {
         int legendSpace = Math.max(100, (resourceColors.size() / 4 + 1) * 30);
         int graphHeight = getHeight() - margin * 2 - legendSpace;
         
-        int maxTime = history.get(history.size() - 1).time;
+        int maxTime = history.getLast().time;
         int maxQuantity = history.stream()
             .flatMap(s -> s.stocks.values().stream())
             .max(Integer::compareTo)
