@@ -52,6 +52,7 @@ logs/
 *.temp
 trace*.txt
 *.trace
+traces/*.txt
 
 # Unit test reports
 TEST*.xml

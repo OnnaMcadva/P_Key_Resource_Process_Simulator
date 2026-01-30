@@ -1,4 +1,7 @@
 package krpsim;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 
 import krpsim.optimizer.OptimizationStrategy;
 import krpsim.optimizer.GreedyOptimizer;
@@ -85,6 +88,15 @@ public class Krpsim {
             return;
         }
         var result = strategy.optimize(config, maxDelay);
+
+        // --- Save trace to file for verification ---
+        String traceDir = "traces";
+        Files.createDirectories(Paths.get(traceDir));
+        // Use config file name (without path) for trace file name
+        String configBase = file.replaceAll("^.*[\\/]", "").replaceAll("\\..*", "");
+        String traceFile = traceDir + "/" + configBase + "_trace.txt";
+        Files.write(Paths.get(traceFile), result.trace(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        System.err.println("Trace saved to: " + traceFile);
 
         // Count all unique stocks (initial + those produced/consumed by processes)
         Set<String> allStocks = new HashSet<>(config.initialStocks().keySet());

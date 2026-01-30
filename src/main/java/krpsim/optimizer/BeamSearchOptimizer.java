@@ -1,10 +1,23 @@
+
 package krpsim.optimizer;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.PriorityQueue;
+import java.util.TreeSet;
 
 import krpsim.model.Event;
 import krpsim.model.Process;
 import krpsim.utils.Parser;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Set;
 
 /**
  * Beam Search optimization strategy.
@@ -98,19 +111,17 @@ public class BeamSearchOptimizer implements OptimizationStrategy {
         // Main beam search loop
         while (!beam.isEmpty()) {
             PriorityQueue<SearchState> nextBeam = new PriorityQueue<>();
-            
             for (SearchState state : beam) {
-                // Apply completions
-                while (!state.activeProcesses.isEmpty() && 
-                       state.activeProcesses.peek().time() <= state.currentTime) {
+                // 1. Apply all completions at current time
+                while (!state.activeProcesses.isEmpty() && state.activeProcesses.peek().time() <= state.currentTime) {
                     Event ev = state.activeProcesses.poll();
                     Process p = findProcess(processes, ev.processName());
                     if (p != null) {
                         applyResults(state.stocks, p);
                     }
                 }
-                
-                // Check if we've exceeded time limit
+
+                // 2. Check if we've exceeded time limit
                 if (state.currentTime > maxDelay) {
                     double finalScore = calculateScore(state.stocks, optimize, state.currentTime, baseline);
                     if (finalScore > bestFinalScore) {
@@ -119,58 +130,55 @@ public class BeamSearchOptimizer implements OptimizationStrategy {
                     }
                     continue;
                 }
-                
-                // Generate successor states by trying to start each runnable process
+
+                // 3. Get all runnable processes (filtered)
                 List<Process> candidates = getRunnable(state.stocks, processes);
-                
-                // CRITICAL FIX: Filter only relevant processes that lead to optimization targets
                 if (!optimize.contains("time") || optimize.size() > 1) {
-                    candidates = candidates.stream()
-                        .filter(relevantProcesses::contains)
-                        .toList();
+                    candidates = candidates.stream().filter(relevantProcesses::contains).toList();
                 }
-                
-                if (candidates.isEmpty()) {
-                    // No more processes can start
-                    if (state.activeProcesses.isEmpty()) {
-                        // Finished state
+
+                boolean startedAny = false;
+                SearchState newState = state.copy();
+                for (Process p : candidates) {
+                    if (isRunnable(newState.stocks, p)) {
+                        consumeResources(newState.stocks, p);
+                        newState.trace.add(newState.currentTime + ":" + p.name());
+                        newState.activeProcesses.add(new Event(newState.currentTime + p.delay(), p.name()));
+                        startedAny = true;
+                    }
+                }
+
+                if (startedAny) {
+                    // Advance time to next completion
+                    if (!newState.activeProcesses.isEmpty()) {
+                        newState.currentTime = newState.activeProcesses.peek().time();
+                        newState.heuristicScore = calculateHeuristic(newState.stocks, newState.currentTime, optimize, maxDelay, processes, baseline);
+                        nextBeam.add(newState);
+                    } else {
+                        // No active processes left, finished state
+                        double finalScore = calculateScore(newState.stocks, optimize, newState.currentTime, baseline);
+                        if (finalScore > bestFinalScore) {
+                            bestFinalScore = finalScore;
+                            bestFinalState = newState;
+                        }
+                    }
+                } else {
+                    // If nothing started, just advance to next completion
+                    if (!state.activeProcesses.isEmpty()) {
+                        SearchState waitState = state.copy();
+                        waitState.currentTime = state.activeProcesses.peek().time();
+                        waitState.heuristicScore = calculateHeuristic(waitState.stocks, waitState.currentTime, optimize, maxDelay, processes, baseline);
+                        nextBeam.add(waitState);
+                    } else {
+                        // No active processes and nothing to start: finished
                         double finalScore = calculateScore(state.stocks, optimize, state.currentTime, baseline);
                         if (finalScore > bestFinalScore) {
                             bestFinalScore = finalScore;
                             bestFinalState = state;
                         }
-                    } else {
-                        // Advance to next completion
-                        SearchState advanced = state.copy();
-                        advanced.currentTime = advanced.activeProcesses.peek().time();
-                        advanced.heuristicScore = calculateHeuristic(advanced.stocks, advanced.currentTime, 
-                                                                     optimize, maxDelay, processes, baseline);
-                        nextBeam.add(advanced);
-                    }
-                } else {
-                    // Try starting each candidate process ONCE per tick
-                    for (Process p : candidates) {
-                        SearchState newState = state.copy();
-                        consumeResources(newState.stocks, p);
-                        newState.trace.add(newState.currentTime + ":" + p.name());
-                        newState.activeProcesses.add(new Event(newState.currentTime + p.delay(), p.name()));
-                        newState.heuristicScore = calculateHeuristic(newState.stocks, newState.currentTime, 
-                                                                     optimize, maxDelay, processes, baseline);
-                        nextBeam.add(newState);
-                    }
-                    
-                    // Also consider "wait" action - advance time without starting anything
-                    if (!state.activeProcesses.isEmpty()) {
-                        SearchState waitState = state.copy();
-                        waitState.currentTime = Math.min(waitState.currentTime + 1, 
-                                                        waitState.activeProcesses.peek().time());
-                        waitState.heuristicScore = calculateHeuristic(waitState.stocks, waitState.currentTime, 
-                                                                      optimize, maxDelay, processes, baseline);
-                        nextBeam.add(waitState);
                     }
                 }
             }
-            
             // Keep only top beamWidth states
             beam.clear();
             int count = 0;
@@ -178,8 +186,6 @@ public class BeamSearchOptimizer implements OptimizationStrategy {
                 beam.add(nextBeam.poll());
                 count++;
             }
-            
-            // Safety check: if beam is empty, we're done
             if (beam.isEmpty()) break;
         }
         

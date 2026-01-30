@@ -1,11 +1,20 @@
+
 package krpsim;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.PriorityQueue;
+import java.util.TreeSet;
 
 import krpsim.model.Process;
 import krpsim.utils.Parser;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Trace verification program for krpsim.
