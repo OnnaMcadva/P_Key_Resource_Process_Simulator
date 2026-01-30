@@ -1,33 +1,26 @@
-
 package krpsim.visualizer;
+
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.PriorityQueue;
 import java.util.TreeSet;
-
-import krpsim.model.Event;
-import krpsim.model.Process;
-import krpsim.optimizer.OptimizationStrategy;
-import krpsim.utils.Parser;
-
 import javax.swing.JPanel;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Point;
 import java.awt.RenderingHints;
-import java.awt.Stroke;
-import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.List;
+
+import krpsim.model.Event;
+import krpsim.model.Process;
+import krpsim.optimizer.OptimizationStrategy;
+import krpsim.utils.Parser;
 
 /**
  * Panel displaying resource evolution over time.
