@@ -42,14 +42,16 @@ public class GreedyOptimizer implements OptimizationStrategy {
         // Build dependency graph: which processes are relevant for optimization targets
         Set<Process> relevantProcesses = buildRelevantProcessGraph(processes, optimize);
         
+        // Active events are ordered by completion time; the earliest completion is processed first.
         PriorityQueue<Event> active = new PriorityQueue<>();
+        // Trace keeps the start time and process name for reporting.
         List<String> trace = new ArrayList<>();
         int currentTime = 0;
         boolean reachedDelay = false;
         int lastCompletionTime = -1;
         
         while (true) {
-            // Apply all completions at currentTime
+            // Apply all completions at currentTime and update stocks.
             while (!active.isEmpty() && active.peek().time() <= currentTime) {
                 Event ev = active.poll();
                 Process p = findProcess(processes, ev.processName());
@@ -59,7 +61,7 @@ public class GreedyOptimizer implements OptimizationStrategy {
                 lastCompletionTime = Math.max(lastCompletionTime, ev.time());
             }
             
-            // Try to start processes at current time
+            // Try to start processes at current time.
             boolean startedAny = false;
             
             if (currentTime > maxDelay) {
@@ -67,9 +69,10 @@ public class GreedyOptimizer implements OptimizationStrategy {
                 break;
             }
             
+            // Collect all processes that are runnable with current stocks.
             List<Process> candidates = getRunnable(stocks, processes);
             
-            // CRITICAL FIX: Filter only relevant processes that lead to optimization targets
+            // Filter only relevant processes that lead to optimization targets.
             if (!optimize.contains("time") || optimize.size() > 1) {
                 // If we have specific resource targets (not just "time"), filter candidates
                 candidates = candidates.stream()
@@ -78,6 +81,7 @@ public class GreedyOptimizer implements OptimizationStrategy {
             }
             
             if (!candidates.isEmpty()) {
+                // Prefer processes that produce more of the optimization targets.
                 Comparator<Process> priority = Comparator.comparingInt(p -> {
                     int score = 0;
                     for (var e : p.results().entrySet()) {
@@ -87,24 +91,28 @@ public class GreedyOptimizer implements OptimizationStrategy {
                 });
                 
                 List<Process> ordered;
+                // If time is a target, do not re-order by resources; keep input order.
                 if (optimize.contains("time")) {
                     ordered = new ArrayList<>(candidates);
                 } else if (!Collections.disjoint(optimize, extractAllResultKeys(processes))) {
+                    // Stable tie-breaker keeps deterministic output when scores match.
                     ordered = candidates.stream()
                         .sorted(priority.thenComparing(p -> processes.indexOf(p)))
                         .collect(Collectors.toList());
                 } else {
+                    // No overlap with optimization resources; keep runnable order.
                     ordered = new ArrayList<>(candidates);
                 }
 
-                // Start each runnable process once per tick
-                // to avoid spam with hundreds of identical launches
+                // Start each runnable process once per tick to avoid
+                // a runaway loop of identical starts in the same time unit.
                 for (Process p : ordered) {
                     if (isRunnable(stocks, p)) {
                         if (currentTime > maxDelay) {
                             reachedDelay = true;
                             break;
                         }
+                        // Consume inputs immediately and schedule a completion event.
                         consumeResources(stocks, p);
                         trace.add(currentTime + ":" + p.name());
                         active.add(new Event(currentTime + p.delay(), p.name()));
@@ -114,23 +122,25 @@ public class GreedyOptimizer implements OptimizationStrategy {
                 if (reachedDelay) break;
 
                 if (startedAny) {
-                    // Move to nearest completion to apply results
+                    // Move to the nearest completion to apply results as soon as possible.
                     if (!active.isEmpty()) {
                         currentTime = active.peek().time();
                     } else {
                         break;
                     }
                 } else {
+                    // No process could start now; jump to next completion if any.
                     if (active.isEmpty()) break;
                     else currentTime = active.peek().time();
                 }
             } else {
+                // No candidates; only wait for the next completion or end.
                 if (active.isEmpty()) break;
                 else currentTime = active.peek().time();
             }
         }
         
-        // Complete remaining active processes
+        // Complete remaining active processes after loop termination.
         while (!active.isEmpty()) {
             Event ev = active.poll();
             Process p = findProcess(processes, ev.processName());
@@ -138,6 +148,7 @@ public class GreedyOptimizer implements OptimizationStrategy {
             lastCompletionTime = Math.max(lastCompletionTime, ev.time());
         }
         
+        // Resolve final time and compute score based on the requested objectives.
         int finalTime = lastCompletionTime >= 0 ? lastCompletionTime : currentTime;
         boolean finished = active.isEmpty() && getRunnable(stocks, processes).isEmpty();
         double score = calculateScore(stocks, optimize, finalTime);
@@ -146,14 +157,17 @@ public class GreedyOptimizer implements OptimizationStrategy {
     }
     
     private Process findProcess(List<Process> processes, String name) {
+        // Linear search keeps behavior simple and preserves list order semantics.
         return processes.stream().filter(p -> p.name().equals(name)).findFirst().orElse(null);
     }
     
     private List<Process> getRunnable(Map<String, Integer> stocks, List<Process> processes) {
+        // Runnable means all required inputs are available in current stocks.
         return processes.stream().filter(p -> isRunnable(stocks, p)).toList();
     }
     
     private boolean isRunnable(Map<String, Integer> stocks, Process p) {
+        // Verify every required resource has enough quantity.
         for (var need : p.needs().entrySet()) {
             if (stocks.getOrDefault(need.getKey(), 0) < need.getValue()) return false;
         }
@@ -161,20 +175,24 @@ public class GreedyOptimizer implements OptimizationStrategy {
     }
     
     private void consumeResources(Map<String, Integer> stocks, Process p) {
+        // Remove required resources at process start.
         p.needs().forEach((k, v) -> stocks.merge(k, -v, Integer::sum));
     }
     
     private void applyResults(Map<String, Integer> stocks, Process p) {
+        // Add produced resources when the process finishes.
         p.results().forEach((k, v) -> stocks.merge(k, v, Integer::sum));
     }
     
     private Set<String> extractAllResultKeys(List<Process> processes) {
         Set<String> s = new HashSet<>();
+        // Collect all result resource names to detect overlap with optimization targets.
         for (var p : processes) s.addAll(p.results().keySet());
         return s;
     }
     
     private double calculateScore(Map<String, Integer> stocks, Set<String> optimize, int finalTime) {
+        // Higher resource totals increase score; shorter time reduces penalty.
         double score = 0;
         for (var e : stocks.entrySet()) {
             if (optimize.contains(e.getKey())) {
