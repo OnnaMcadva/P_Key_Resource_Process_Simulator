@@ -13,24 +13,45 @@ import krpsim.model.Event;
 import krpsim.model.Process;
 import krpsim.utils.Parser;
 
+/**
+ * Beam-search based optimization strategy.
+ *
+ * <p>The optimizer explores multiple promising simulation states in parallel,
+ * keeping only the top {@code beamWidth} states (by heuristic score) at each
+ * expansion step.
+ */
 public class BeamSearchOptimizer implements OptimizationStrategy {
 
     private static final int DEFAULT_BEAM_WIDTH = 8;
     private final int beamWidth;
 
+    /**
+     * Creates a beam-search optimizer with the default beam width.
+     */
     public BeamSearchOptimizer() {
         this(DEFAULT_BEAM_WIDTH);
     }
 
+    /**
+     * Creates a beam-search optimizer.
+     *
+     * @param beamWidth maximum number of states kept at each search layer
+     */
     public BeamSearchOptimizer(int beamWidth) {
         this.beamWidth = beamWidth;
     }
 
+    /**
+     * @return human-readable strategy name including configured beam width
+     */
     @Override
     public String getName() {
         return "Beam Search (width=" + beamWidth + ")";
     }
 
+    /**
+     * Search node used by the beam-search frontier.
+     */
     private static class SearchState implements Comparable<SearchState> {
 
         Map<String, Integer> stocks;
@@ -39,6 +60,9 @@ public class BeamSearchOptimizer implements OptimizationStrategy {
         int currentTime;
         double heuristicScore;
 
+        /**
+         * Creates a deep-copy-ready search state snapshot.
+         */
         SearchState(Map<String, Integer> stocks,
                     PriorityQueue<Event> active,
                     List<String> trace,
@@ -52,16 +76,29 @@ public class BeamSearchOptimizer implements OptimizationStrategy {
             this.heuristicScore = score;
         }
 
+        /**
+         * @return independent copy of the current state for branching
+         */
         SearchState copy() {
             return new SearchState(stocks, activeProcesses, trace, currentTime, heuristicScore);
         }
 
+        /**
+         * Higher heuristic score means higher priority in the queue.
+         */
         @Override
         public int compareTo(SearchState other) {
             return Double.compare(other.heuristicScore, this.heuristicScore);
         }
     }
 
+    /**
+     * Runs beam search over possible process schedules and returns the best found plan.
+     *
+     * @param config parsed simulation configuration
+     * @param maxDelay upper bound on simulated time for optimization
+     * @return optimization result containing trace, final stocks and score
+     */
     @Override
     public OptimizationResult optimize(Parser.Config config, int maxDelay) {
 
@@ -88,6 +125,7 @@ public class BeamSearchOptimizer implements OptimizationStrategy {
         SearchState bestFinalState = null;
         double bestFinalScore = Double.NEGATIVE_INFINITY;
 
+        // Expand frontier layer by layer, always keeping only top-N states.
         while (!beam.isEmpty()) {
 
             PriorityQueue<SearchState> nextBeam = new PriorityQueue<>();
@@ -118,6 +156,7 @@ public class BeamSearchOptimizer implements OptimizationStrategy {
 
                 List<Process> candidates = getRunnable(state.stocks, processes);
 
+                // Restrict candidates to the backward-reachable subgraph for target resources.
                 if (!optimize.contains("time") || optimize.size() > 1) {
                     candidates = candidates.stream()
                             .filter(relevantProcesses::contains)
@@ -174,6 +213,7 @@ public class BeamSearchOptimizer implements OptimizationStrategy {
                     nextBeam.add(waitState);
                 }
 
+                // Dead-end state with no active/runnable process: evaluate as terminal.
                 if (!expanded && state.activeProcesses.isEmpty()) {
 
                     double finalScore =
@@ -193,6 +233,7 @@ public class BeamSearchOptimizer implements OptimizationStrategy {
 
             int count = 0;
 
+            // Keep only the best states according to the heuristic.
             while (!nextBeam.isEmpty() && count < beamWidth) {
 
                 beam.add(nextBeam.poll());
@@ -239,6 +280,9 @@ public class BeamSearchOptimizer implements OptimizationStrategy {
         return fallback.optimize(config, maxDelay);
     }
 
+    /**
+     * Estimates future potential of a state for beam ordering.
+     */
     private double calculateHeuristic(
             Map<String, Integer> stocks,
             int currentTime,
@@ -298,6 +342,9 @@ public class BeamSearchOptimizer implements OptimizationStrategy {
         return score;
     }
 
+    /**
+     * Computes final objective score for a terminal state.
+     */
     private double calculateScore(Map<String, Integer> stocks,
                                   Set<String> optimize,
                                   int finalTime,
@@ -323,6 +370,9 @@ public class BeamSearchOptimizer implements OptimizationStrategy {
         return score;
     }
 
+    /**
+     * Finds process by name.
+     */
     private Process findProcess(List<Process> processes, String name) {
 
         return processes.stream()
@@ -331,6 +381,9 @@ public class BeamSearchOptimizer implements OptimizationStrategy {
                 .orElse(null);
     }
 
+    /**
+     * @return all processes runnable with current stock levels
+     */
     private List<Process> getRunnable(Map<String, Integer> stocks,
                                       List<Process> processes) {
 
@@ -339,6 +392,9 @@ public class BeamSearchOptimizer implements OptimizationStrategy {
                 .toList();
     }
 
+    /**
+     * Checks if all required inputs for a process are currently available.
+     */
     private boolean isRunnable(Map<String, Integer> stocks, Process p) {
 
         for (var need : p.needs().entrySet()) {
@@ -352,16 +408,25 @@ public class BeamSearchOptimizer implements OptimizationStrategy {
         return true;
     }
 
+    /**
+     * Subtracts process inputs from stocks when the process starts.
+     */
     private void consumeResources(Map<String, Integer> stocks, Process p) {
 
         p.needs().forEach((k, v) -> stocks.merge(k, -v, Integer::sum));
     }
 
+    /**
+     * Adds process outputs to stocks when the process completes.
+     */
     private void applyResults(Map<String, Integer> stocks, Process p) {
 
         p.results().forEach((k, v) -> stocks.merge(k, v, Integer::sum));
     }
 
+    /**
+     * Builds a backward-reachable process set that can contribute to optimize targets.
+     */
     private Set<Process> buildRelevantProcessGraph(List<Process> processes,
                                                    Set<String> optimize) {
 

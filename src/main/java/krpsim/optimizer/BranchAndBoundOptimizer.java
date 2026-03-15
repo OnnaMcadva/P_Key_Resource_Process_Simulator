@@ -57,27 +57,34 @@ public class BranchAndBoundOptimizer implements OptimizationStrategy {
         List<String> trace;
         int currentTime;
         double actualScore; // g(n): actual score achieved so far
-        double estimatedTotal; // f(n) = g(n) + h(n): total estimated score
+        double remainingEstimate; // h(n): optimistic remaining value
         
         SearchState(Map<String, Integer> stocks, PriorityQueue<Event> active,
-                   List<String> trace, int time, double actual, double estimated) {
+                   List<String> trace, int time, double actual, double remaining) {
             this.stocks = new LinkedHashMap<>(stocks);
             this.activeProcesses = new PriorityQueue<>(active);
             this.trace = new ArrayList<>(trace);
             this.currentTime = time;
             this.actualScore = actual;
-            this.estimatedTotal = estimated;
+            this.remainingEstimate = remaining;
+        }
+
+        /**
+         * @return A* score f(n) = g(n) + h(n)
+         */
+        double f() {
+            return actualScore + remainingEstimate;
         }
         
         SearchState copy() {
             return new SearchState(stocks, activeProcesses, trace, currentTime, 
-                                 actualScore, estimatedTotal);
+                                 actualScore, remainingEstimate);
         }
         
         @Override
         public int compareTo(SearchState other) {
             // Higher estimated total is better
-            return Double.compare(other.estimatedTotal, this.estimatedTotal);
+            return Double.compare(other.f(), this.f());
         }
     }
     
@@ -100,8 +107,8 @@ public class BranchAndBoundOptimizer implements OptimizationStrategy {
             new ArrayList<>(),
             0,
             0.0,
-            estimateUpperBound(new LinkedHashMap<>(config.initialStocks()), 0, 
-                             processes, optimize, maxDelay, baseline)
+            estimateRemainingValue(new LinkedHashMap<>(config.initialStocks()), 0,
+                                 processes, optimize, maxDelay, baseline)
         );
         openSet.add(initialState);
         
@@ -117,12 +124,7 @@ public class BranchAndBoundOptimizer implements OptimizationStrategy {
             
             SearchState current = openSet.poll();
             // statesExplored++;
-            
-            // Prune if this state cannot beat best known solution
-            if (current.estimatedTotal < bestScore) {
-                continue;
-            }
-            
+
             // Apply completions
             int lastCompletionTime = current.currentTime;
             while (!current.activeProcesses.isEmpty() && 
@@ -137,6 +139,21 @@ public class BranchAndBoundOptimizer implements OptimizationStrategy {
             
             // Update actual score
             current.actualScore = calculateActualScore(current.stocks, optimize, current.currentTime, baseline);
+
+            // Recompute bound from the normalized state before pruning.
+            current.remainingEstimate = estimateRemainingValue(
+                current.stocks,
+                current.currentTime,
+                processes,
+                optimize,
+                maxDelay,
+                baseline
+            );
+
+            // Prune if this state cannot beat best known solution.
+            if (current.f() < bestScore) {
+                continue;
+            }
             
             // Check if exceeded time limit
             if (current.currentTime > maxDelay) {
@@ -163,10 +180,15 @@ public class BranchAndBoundOptimizer implements OptimizationStrategy {
                     // Advance to next completion
                     SearchState advanced = current.copy();
                     advanced.currentTime = advanced.activeProcesses.peek().time();
-                    advanced.estimatedTotal = advanced.actualScore + 
-                        estimateRemainingValue(advanced.stocks, advanced.currentTime, 
-                                              processes, optimize, maxDelay, baseline);
-                    if (advanced.estimatedTotal >= bestScore) {
+                    advanced.remainingEstimate = estimateRemainingValue(
+                        advanced.stocks,
+                        advanced.currentTime,
+                        processes,
+                        optimize,
+                        maxDelay,
+                        baseline
+                    );
+                    if (advanced.f() >= bestScore) {
                         openSet.add(advanced);
                     }
                 }
@@ -179,12 +201,17 @@ public class BranchAndBoundOptimizer implements OptimizationStrategy {
                     newState.activeProcesses.add(new Event(newState.currentTime + p.delay(), p.name()));
                     
                     newState.actualScore = calculateActualScore(newState.stocks, optimize, newState.currentTime, baseline);
-                    newState.estimatedTotal = newState.actualScore + 
-                        estimateRemainingValue(newState.stocks, newState.currentTime, 
-                                              processes, optimize, maxDelay, baseline);
+                    newState.remainingEstimate = estimateRemainingValue(
+                        newState.stocks,
+                        newState.currentTime,
+                        processes,
+                        optimize,
+                        maxDelay,
+                        baseline
+                    );
                     
                     // Only add if this could potentially beat best
-                    if (newState.estimatedTotal >= bestScore) {
+                    if (newState.f() >= bestScore) {
                         openSet.add(newState);
                     }
                 }
@@ -217,25 +244,8 @@ public class BranchAndBoundOptimizer implements OptimizationStrategy {
         }
         
         // Fallback to greedy only if absolutely nothing was found
-        if (bestSolution == null) {
-            OptimizationStrategy fallback = new GreedyOptimizer();
-            return fallback.optimize(config, maxDelay);
-        }
-        
-        // Should not reach here since we always have initial state
-        return new OptimizationResult(List.of(), new LinkedHashMap<>(), 0, true, 0.0);
-    }
-    
-    /**
-     * Optimistic upper bound on total value achievable from this state.
-     * Assumes infinite resources and parallelism.
-     */
-    private double estimateUpperBound(Map<String, Integer> stocks, int currentTime,
-                                     List<Process> processes, Set<String> optimize, int maxDelay,
-                                     Map<String, Integer> baseline) {
-        double currentValue = calculateActualScore(stocks, optimize, currentTime, baseline);
-        double potentialValue = estimateRemainingValue(stocks, currentTime, processes, optimize, maxDelay, baseline);
-        return currentValue + potentialValue;
+        OptimizationStrategy fallback = new GreedyOptimizer();
+        return fallback.optimize(config, maxDelay);
     }
     
     /**
