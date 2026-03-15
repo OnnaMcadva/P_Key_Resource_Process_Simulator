@@ -33,9 +33,9 @@
 - **Real-time Visualization**: Interactive Gantt charts and resource evolution graphs
 - **Trace Verification**: Built-in validator for simulation results
 - **Cross-platform**: Runs on Windows, Linux, and macOS
-- **No External Dependencies**: Uses only standard Java libraries
+- **No Runtime Dependencies**: Uses standard Java libraries at runtime
 - **Flexible Configuration**: Simple text-based configuration files
-- **Multiple Test Scenarios**: Includes 6+ example configurations
+- **Multiple Test Scenarios**: Includes several example configurations
 
 ---
 
@@ -284,26 +284,31 @@ The GUI includes three tabs:
 
 Verify a simulation trace for correctness:
 
-**Step 1: Generate trace (Windows PowerShell)**
+**Step 1: Run simulation (Windows PowerShell)**
 ```powershell
-java -jar target/krpsim-1.0.jar krpsim/simple 100 2>$null | Out-File trace.txt -Encoding utf8
+java -jar target/krpsim-1.0.jar krpsim/simple 100
 ```
 
-**Step 1: Generate trace (Linux/macOS)**
+**Step 1: Run simulation (Linux/macOS)**
 ```bash
-java -jar target/krpsim-1.0.jar krpsim/simple 100 2>/dev/null > trace.txt
+java -jar target/krpsim-1.0.jar krpsim/simple 100
+```
+
+The simulator saves a full trace automatically to:
+
+```text
+traces/simple_trace.txt
 ```
 
 **Step 2: Verify trace (All platforms)**
 ```bash
-java -cp target/krpsim-1.0.jar krpsim.KrpsimVerif krpsim/simple trace.txt
+java -cp target/krpsim-1.0.jar krpsim.KrpsimVerif krpsim/simple traces/simple_trace.txt
 ```
 
 Expected output:
 ```
-Configuration file is valid.
-Verifying trace against configuration...
-Trace is valid!
+Trace is correct!
+Final stocks at cycle ...
 ```
 
 ---
@@ -399,12 +404,15 @@ P_Key_Resource_Process_Simulator/
 │           └── examples/
 │               └── simple.txt
 ├── krpsim/                                  # Test configurations
+│   ├── coffee_shop
+│   ├── ikea
+│   ├── inception
 │   ├── simple
 │   ├── pomme
-│   ├── inception
-│   ├── ikea
 │   ├── recre
-│   └── steak
+│   ├── solar_system
+│   ├── steak
+│   └── test_relevance
 ├── target/                                  # Compiled output
 │   └── krpsim-1.0.jar
 ├── pom.xml                                  # Maven configuration
@@ -421,10 +429,10 @@ P_Key_Resource_Process_Simulator/
 **File:** `krpsim/simple`
 ```
 euro:10
-equipment_purchase:(euro:8):(equipment:1):10
-product_creation:(equipment:1):(product:1):30
-delivery:(product:1):(happy_client:1):20
-optimize:(time;happy_client)
+achat_materiel:(euro:8):(materiel:1):10
+realisation_produit:(materiel:1):(produit:1):30
+livraison:(produit:1):(client_content:1):20
+optimize:(time;client_content)
 ```
 
 **Run (Windows):**
@@ -442,15 +450,15 @@ java -jar target/krpsim-1.0.jar krpsim/simple 100
 Nice file! 3 processes, 4 stocks, 2 to optimize
 Evaluating .................. done.
 Main walk
-0:equipment_purchase
-10:product_creation
-40:delivery
+0:achat_materiel
+10:realisation_produit
+40:livraison
 no more process doable at time 60
 Stock :
-equipment=> 0
+client_content=> 1
 euro=> 2
-happy_client=> 1
-product=> 0
+materiel=> 0
+produit=> 0
 ```
 
 ### Example 2: Continuous Production (Infinite)
@@ -527,7 +535,7 @@ java -jar target/krpsim-1.0.jar krpsim/pomme 100 --optimize-level 2
 **Characteristics:**
 - ⚖️ **Balanced**: Explores multiple solution paths
 - 🎯 **Very Good**: 90-98% optimal
-- 💡 **Strategy**: Keeps top-N candidates at each step (beam width = 8)
+- 💡 **Strategy**: Keeps top-N candidates at each step (beam width = 16)
 
 **Best for:** Medium complexity, good quality needed, reasonable time available
 
@@ -686,9 +694,9 @@ export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0
 
 **Problem**: Trace verification fails
 ```bash
-# Ensure trace file is complete and properly formatted
-# Redirect only stdout, not stderr:
-java -jar target/krpsim-1.0.jar krpsim/simple 100 2>/dev/null > trace.txt
+# Use the auto-generated full trace file (recommended):
+java -jar target/krpsim-1.0.jar krpsim/simple 100
+java -cp target/krpsim-1.0.jar krpsim.KrpsimVerif krpsim/simple traces/simple_trace.txt
 ```
 
 ---
